@@ -1,0 +1,12 @@
+# Architecture
+arch: resnet32_cifar100
+pruned_model: ./ckpt/resnet32_cifar100.pt
+
+# ===== Dataset ===== #
+data_path: ./datasets/cifar
+data_set: cifar100
+
+
+# ===== Sparsity ===== #
+conv_type: PretrainConv
+

@@ -1,0 +1,12 @@
+# Architecture
+arch: resnet50
+pruned_model: ./ckpt/resnet50_imagenet.pt
+
+# ===== Dataset ===== #
+data_path: ./datasets/imagenet #Change to your path of Imagenet
+data_set: imagenet
+
+
+# ===== Sparsity ===== #
+conv_type: PretrainConv
+

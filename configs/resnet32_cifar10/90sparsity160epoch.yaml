@@ -1,0 +1,28 @@
+# Architecture
+arch: resnet32_cifar10
+pretrained_model: ./pre-train/resnet32_cifar10.pt
+
+# ===== Dataset ===== #
+data_path: ../datasets/Cifar
+data_set: cifar10
+job_dir: ./experiment/resnet32_cifar10/90sparsity160epoch
+
+# ===== Learning Rate Policy ======== #
+optimizer: sgd
+lr: 0.1
+
+# ===== Network training config ===== #
+num_epochs: 160
+weight_decay: 0.0005
+momentum: 0.9
+train_batch_size: 256
+eval_batch_size: 256
+prune_rate: 0.9 # Override
+
+# ===== Sparsity ===== #
+conv_type: PretrainConv
+freeze_weights: True
+
+
+# ===== Hardware setup ===== #
+workers: 20

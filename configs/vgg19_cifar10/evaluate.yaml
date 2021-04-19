@@ -1,0 +1,13 @@
+# Architecture
+arch: vgg19_cifar10
+pruned_model: ./ckpt/vgg19_cifar10.pt
+
+# ===== Dataset ===== #
+data_path: ./datasets/cifar
+data_set: cifar10
+
+eval_batch_size: 256
+
+# ===== Sparsity ===== #
+conv_type: PretrainConv
+

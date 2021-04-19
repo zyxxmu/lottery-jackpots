@@ -1,0 +1,27 @@
+# Architecture
+arch: resnet50
+pretrained_model: ./pre-train/resnet50.pth
+
+# ===== Dataset ===== #
+data_path: ./datasets/imagenet #Change to your path of Imagenet
+data_set: imagenet
+job_dir: ./experiment/resnet50_imagenet/80sparsity60epoch
+
+# ===== Learning Rate Policy ======== #
+optimizer: sgd
+lr: 0.1
+
+# ===== Network training config ===== #
+num_epochs: 60
+weight_decay: 0.0001
+momentum: 0.9
+train_batch_size: 256
+eval_batch_size: 256
+prune_rate: 0.8 # Override
+
+# ===== Sparsity ===== #
+conv_type: PretrainConv
+freeze_weights: True
+
+# ===== Hardware setup ===== #
+workers: 20
