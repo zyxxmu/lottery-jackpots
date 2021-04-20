@@ -20,7 +20,7 @@
 
    Note that the `data_path` in the yaml file should be changed to the data 
 
-## Evaluate Our Pruned Modelse
+## Evaluate Our Pruned Models
 
 We provide configuration, training logs, and pruned models reported in the paper, which can be downloaded from the links in the following table:
 
