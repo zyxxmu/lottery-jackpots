@@ -47,7 +47,7 @@ We provide configuration, training logs, and pruned models reported in the paper
 | ResNet-50 | ImageNet  | 90%      | 30    | 72.17%     | [link](https://drive.google.com/drive/folders/164S_FlcLa2IQWlXXLbOCRsTGYUu66Xhu?usp=sharing) |
 | ResNet-50 | ImageNet  | 90%      | 60    | 72.46%     | [link](https://drive.google.com/drive/folders/1FtR7VuGeWB_h-WhsmWupsJsFnhSt3kyO?usp=sharing) |
 
-To test the our pruned models, download the pruned models and place them in the `ckpt` folder.
+To test our pruned models, download the pruned models and place them in the `ckpt` folder.
 
 1. Select a configuration file in `configs` to test the pruned models. For example, to evaluate a lottery jackpot for pruning ResNet-32 on CIFAR-10, run:
 
