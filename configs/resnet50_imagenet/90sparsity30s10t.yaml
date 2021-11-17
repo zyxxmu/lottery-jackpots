@@ -1,0 +1,26 @@
+# Architecture
+arch: resnet50
+pretrained_model: ./experiment/resnet50_imagenet/90sparsity30s/checkpoint/model_best.pt
+
+# ===== Dataset ===== #
+data_path: ./datasets/imagenet #Change to your path of Imagenet
+data_set: imagenet
+job_dir: ./experiment/resnet50_imagenet/90sparsity30s10t
+
+# ===== Learning Rate Policy ======== #
+optimizer: sgd
+lr: 0.01
+
+# ===== Network training config ===== #
+num_epochs: 10
+weight_decay: 0
+momentum: 0.9
+train_batch_size: 256
+eval_batch_size: 256
+prune_rate: 0.9 # Override
+
+# ===== Sparsity ===== #
+conv_type: PretrainConv
+
+# ===== Hardware setup ===== #
+workers: 20
