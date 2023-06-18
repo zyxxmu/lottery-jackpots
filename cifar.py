@@ -37,17 +37,37 @@ print('==> Loading Data..')
 if args.data_set == 'cifar10':
     loader = cifar10.Data(args)
 elif args.data_set == 'cifar100':
-    loader = cifar100.Data(args)  
-              
+    loader = cifar100.Data(args)
+    
+def adjust_rate(epoch):
+    rate = math.ceil((1-epoch/args.num_epochs)**4)
+    return rate
+
+def pop_up(model, rate):
+    pop_num = []
+    for n, m in model.named_modules():
+        if hasattr(m, "set_prune_rate"):
+            pop_num.append(m.final_pop_up(rate))
+    model = model.to(device)
+    if len(args.gpus) != 1:
+        model = nn.DataParallel(model, device_ids=args.gpus)
+    #logger.info("epoch{} iter{} pop_configuration {}".format(epoch, iter, pop_num))
+    return np.array(pop_num)
+
 def train(model, optimizer, trainLoader, args, epoch):
 
     model.train()
     losses = utils.AverageMeter(':.4e')
     accurary = utils.AverageMeter(':6.3f')
     print_freq = len(trainLoader.dataset) // args.train_batch_size // 10
+    #print_freq = 1
+    #import pdb;pdb.set_trace()
     start_time = time.time()
+    i = 0 
+    pop_config = np.array([0] * 32)
+    rate = adjust_rate(epoch)
     for batch, (inputs, targets) in enumerate(trainLoader):
-
+        i+=1
         inputs, targets = inputs.to(device), targets.to(device)
         optimizer.zero_grad()
         output = model(inputs)
@@ -56,7 +76,10 @@ def train(model, optimizer, trainLoader, args, epoch):
         loss.backward()
         losses.update(loss.item(), inputs.size(0))
         optimizer.step()
-
+        #if epoch > 5:
+        if args.freeze_weights:
+            pop_config = pop_up(model,rate)
+        #print(pop_config)
         prec1 = utils.accuracy(output, targets)
         accurary.update(prec1[0], inputs.size(0))
 
@@ -73,6 +96,7 @@ def train(model, optimizer, trainLoader, args, epoch):
                 )
             )
             start_time = current_time
+    logger.info("epoch{} pop_configuration {}".format(epoch, pop_config))
 
 def validate(model, testLoader):
     global best_acc
@@ -125,7 +149,6 @@ def generate_pr_cfg(model):
     elif args.layerwise == 'uniform':
         pr_cfg = [args.prune_rate] * cfg_len[args.arch]
         pr_cfg[-1] = 0
-
     get_prune_rate(model, pr_cfg)
 
     return pr_cfg
@@ -175,7 +198,7 @@ def main():
             'state_dict': model_state_dict,
             'best_acc': best_acc,
             'optimizer': optimizer.state_dict(),
-            'scheduler': scheduler.state_dict(),
+            #'scheduler': scheduler.state_dict(),
             'epoch': epoch + 1,
             'cfg': pr_cfg,
         }
@@ -211,10 +234,12 @@ def get_model(args,logger):
     print("=> Creating model '{}'".format(args.arch))
     model = models.__dict__[args.arch]().to(device)
     ckpt = torch.load(args.pretrained_model, map_location=device)
-    model.load_state_dict(ckpt['state_dict'],strict=False)
+    #import pdb;pdb.set_trace()
+    model.load_state_dict(ckpt['state_dict'], strict=False)
     
     #applying sparsity to the network
     pr_cfg = generate_pr_cfg(model)
+    model = models.__dict__[args.arch]().to(device)
     set_model_prune_rate(model, pr_cfg, logger)
     
     if args.freeze_weights:
@@ -228,7 +253,7 @@ def get_optimizer(args, model):
     if args.optimizer == "sgd":
         parameters = list(model.named_parameters())
         bn_params = [v for n, v in parameters if ("bn" in n) and v.requires_grad]
-        rest_params = [v for n, v in parameters if ("bn" not in n) and ("sparseThreshold" not in n) and v.requires_grad]
+        rest_params = [v for n, v in parameters if ("bn" not in n) and v.requires_grad]
         optimizer = torch.optim.SGD(
             [
                 {
@@ -248,6 +273,30 @@ def get_optimizer(args, model):
         )
 
     return optimizer
+def adjust_learning_rate(optimizer, epoch, step, len_epoch):
+    # Warmup
+    if args.lr_policy == 'step':
+        factor = epoch // 8
+        #if epoch >= 5:
+        #    factor = factor + 1
+        lr = args.lr * (0.1 ** factor)
+    elif args.lr_policy == 'cos':
+        lr = 0.5 * args.lr * (1 + math.cos(math.pi * epoch / args.num_epochs))
+    elif args.lr_policy == 'exp':
+        step = 1
+        decay = 0.96
+        lr = args.lr * (decay ** (epoch // step))
+    elif args.lr_policy == 'fixed':
+        lr = args.lr
+    else:
+        raise NotImplementedError
+
+    if epoch < args.warmup_length:
+        lr = lr * float(1 + step + epoch * len_epoch) / (5. * len_epoch)
+    if step == 0:
+        print('current learning rate:{0}'.format(lr))
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
 
 if __name__ == '__main__':
     main()
