@@ -18,10 +18,6 @@
 
    `python imagenet.py --config configs/resnet50_imagenet/90sparsity30epoch.yaml --gpus 0`
 
-   To further tune the weights of a searched lottery jackpot with 10 epochs for pruning 90% parameters of ResNet-50 on ImageNet, run:
-
-   `python imagenet-t.py --config configs/resnet50_imagenet/90sparsity30s10t.yaml --gpus 0`
-
    Note that the `data_path` in the yaml file should be changed to the data. 
 
 ## Evaluate Our Pruned Models
