@@ -1,4 +1,4 @@
-# Lottery Jackpots Exist in Pre-trained Models  ([Paper Link](https://arxiv.org/abs/2104.08700)) ![](https://visitor-badge.glitch.me/badge?page_id=zyxxmu.lottery-jackpots)
+# Lottery Jackpots Exist in Pre-trained Models  ([Paper Link](https://arxiv.org/abs/2104.08700))
 
 ## Requirements
 
@@ -47,9 +47,7 @@ We provide configuration, training logs, and pruned models reported in the paper
 | ResNet-32 | CIFAR-100 | 95%      | 30(S)       | 69.38%     | [link](https://drive.google.com/drive/folders/1ygB_uEYed_27M34jX7Uxh7aOnnBfbLqj?usp=sharing) |
 | ResNet-32 | CIFAR-100 | 95%      | 160(S)      | 70.31%     | [link](https://drive.google.com/drive/folders/1Sz6pbt9RhCPlwmGIaScbFLvt2fXcZ3WM?usp=sharing) |
 | ResNet-50 | ImageNet  | 80%      | 30(S)       | 75.19%     | [link](https://drive.google.com/drive/folders/1s0Ar5VamRndGj06hrMzPLz5WHaqehqTf?usp=sharing) |
-| ResNet-50 | ImageNet  | 80%      | 30(S)+10(T) | 76.66%     | [link](https://drive.google.com/drive/folders/1egmfGG4zPmuAsTmZTeTJ_ZhGkZEt7d_n?usp=sharing) |
 | ResNet-50 | ImageNet  | 90%      | 30(S)       | 72.43%     | [link](https://drive.google.com/drive/folders/1Ws5qjQrSeEYeOf2UhIdEmgQO04O5LwUa?usp=sharing) |
-| ResNet-50 | ImageNet  | 90%      | 30(S)+10(T) | 72.62%     | [link](https://drive.google.com/drive/folders/1wTzyDKr6_PW3ty2wsiZXT-iS5EFsEpzb?usp=sharing) |
 
 To test our pruned models, download the pruned models and place them in the `ckpt` folder.
 
