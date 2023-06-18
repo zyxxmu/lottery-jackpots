@@ -56,7 +56,19 @@ else:
     train_loader = data_tmp.trainLoader
     val_loader = data_tmp.testLoader
 
-
+def adjust_rate(epoch):
+    rate = 0.5 * (1 + math.cos(math.pi * epoch / args.num_epochs))
+    #rate = 0.1
+    #rate = 1 - rate
+    #if epoch < 10:
+    #    rate = 0.9
+    #elif ech < 20:
+    #    rate = 0.6
+    #else:
+    #    rate = 0.3
+    #rate = 1
+    return 1
+    
 def train(epoch, train_loader, model, criterion, optimizer):
     batch_time = utils.AverageMeter('Time', ':6.3f')
     data_time = utils.AverageMeter('Data', ':6.3f')
@@ -67,92 +79,57 @@ def train(epoch, train_loader, model, criterion, optimizer):
     model.train()
     end = time.time()
 
-    if args.use_dali:
-        num_iter = train_loader._size // args.train_batch_size
-    else:
-        num_iter = len(train_loader)
+    num_iter = len(train_loader)
 
     print_freq = num_iter // 10
-    i = 0
-    if args.use_dali:
-        for batch_idx, batch_data in enumerate(train_loader):
-            if args.debug:
-                if i > 5:
-                    break
-                i += 1
-            images = batch_data[0]['data'].cuda()
-            targets = batch_data[0]['label'].squeeze().long().cuda()
-            data_time.update(time.time() - end)
-
-            adjust_learning_rate(optimizer, epoch, batch_idx, num_iter)
-
-            # compute output
-            logits = model(images)
-            loss = loss_func(logits, targets)
-
-            # measure accuracy and record loss
-            prec1, prec5 = utils.accuracy(logits, targets, topk=(1, 5))
-            n = images.size(0)
-            losses.update(loss.item(), n)  # accumulated loss
-            top1.update(prec1.item(), n)
-            top5.update(prec5.item(), n)
-
-            # compute gradient and do SGD step
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-            # measure elapsed time
-            batch_time.update(time.time() - end)
-            end = time.time()
-
-            if batch_idx % print_freq == 0 and batch_idx != 0:
-                logger.info(
-                    'Epoch[{0}]({1}/{2}): '
-                    'Loss {loss.avg:.4f} '
-                    'Prec@1(1,5) {top1.avg:.2f}, {top5.avg:.2f}'.format(
-                        epoch, batch_idx, num_iter, loss=losses,
-                        top1=top1, top5=top5))
+    i = 1
+    if args.arch == 'MobileNetV1':
+        pop_config = np.array([0] * 28)
     else:
-        for batch_idx, (images, targets) in enumerate(train_loader):
-            if args.debug:
-                if i > 5:
-                    break
-                i += 1
-            images = images.cuda()
-            targets = targets.cuda()
-            data_time.update(time.time() - end)
+        pop_config = np.array([0] * 54)
+    rate = adjust_rate(epoch)
+    logger.info("rate {}".format(rate))
+    for batch_idx, (images, targets) in enumerate(train_loader):
+        i+=1
+        if args.debug:
+            if i > 5:
+                break
+            i += 1
+        images = images.cuda()
+        targets = targets.cuda()
+        data_time.update(time.time() - end)
 
-            adjust_learning_rate(optimizer, epoch, batch_idx, num_iter)
+        #if i % 5 == 0:
+        adjust_learning_rate(optimizer, epoch, batch_idx, num_iter)
+        # compute output
+        logits = model(images)
+        loss = loss_func(logits, targets)
 
-            # compute output
-            logits = model(images)
-            loss = loss_func(logits, targets)
+        # measure accuracy and record loss
+        prec1, prec5 = utils.accuracy(logits, targets, topk=(1, 5))
+        n = images.size(0)
+        losses.update(loss.item(), n)  # accumulated loss
+        top1.update(prec1.item(), n)
+        top5.update(prec5.item(), n)
 
-            # measure accuracy and record loss
-            prec1, prec5 = utils.accuracy(logits, targets, topk=(1, 5))
-            n = images.size(0)
-            losses.update(loss.item(), n)  # accumulated loss
-            top1.update(prec1.item(), n)
-            top5.update(prec5.item(), n)
+        # compute gradient and do SGD step
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        pop_num = pop_up(model, rate)
+        #import pdb; pdb.set_trace()
+        pop_config += pop_num
+        batch_time.update(time.time() - end)
+        end = time.time()
 
-            # compute gradient and do SGD step
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-            # measure elapsed time
-            batch_time.update(time.time() - end)
-            end = time.time()
-
-            if batch_idx % print_freq == 0 and batch_idx != 0:
-                logger.info(
-                    'Epoch[{0}]({1}/{2}): '
-                    'Loss {loss.avg:.4f} '
-                    'Prec@1(1,5) {top1.avg:.2f}, {top5.avg:.2f}'.format(
-                        epoch, batch_idx, num_iter, loss=losses,
-                        top1=top1, top5=top5))
-
+        if batch_idx % print_freq == 0 and batch_idx != 0:
+            logger.info(
+                'Epoch[{0}]({1}/{2}): '
+                'Loss {loss.avg:.4f} '
+                'Prec@1(1,5) {top1.avg:.2f}, {top5.avg:.2f}'.format(
+                    epoch, batch_idx, num_iter, loss=losses,
+                    top1=top1, top5=top5))
+    logger.info("epoch{} pop_configuration {}".format(epoch, pop_config))
     return losses.avg, top1.avg, top5.avg
 
 
@@ -163,61 +140,36 @@ def validate(val_loader, model, criterion, args):
     top1 = utils.AverageMeter('Acc@1', ':6.2f')
     top5 = utils.AverageMeter('Acc@5', ':6.2f')
 
-    if args.use_dali:
-        num_iter = val_loader._size // args.eval_batch_size
-    else:
-        num_iter = len(val_loader)
+    num_iter = len(val_loader)
 
     model.eval()
     with torch.no_grad():
         end = time.time()
         i = 0
-        if args.use_dali:
-            for batch_idx, batch_data in enumerate(val_loader):
-                if args.debug:
-                    if i > 5:
-                        break
-                    i += 1
-                images = batch_data[0]['data'].cuda()
-                targets = batch_data[0]['label'].squeeze().long().cuda()
+        
+        for batch_idx, (images, targets) in enumerate(val_loader):
+            if args.debug:
+                if i > 5:
+                    break
+                i += 1
+            images = images.cuda()
+            targets = targets.cuda()
 
-                # compute output
-                logits = model(images)
-                loss = criterion(logits, targets)
+            # compute output
+            logits = model(images)
+            loss = criterion(logits, targets)
 
-                # measure accuracy and record loss
-                pred1, pred5 = utils.accuracy(logits, targets, topk=(1, 5))
-                n = images.size(0)
-                losses.update(loss.item(), n)
-                top1.update(pred1[0], n)
-                top5.update(pred5[0], n)
+            # measure accuracy and record loss
+            pred1, pred5 = utils.accuracy(logits, targets, topk=(1, 5))
+            n = images.size(0)
+            
+            losses.update(loss.item(), n)
+            top1.update(pred1[0], n)
+            top5.update(pred5[0], n)
 
-                # measure elapsed time
-                batch_time.update(time.time() - end)
-                end = time.time()
-        else:
-            for batch_idx, (images, targets) in enumerate(val_loader):
-                if args.debug:
-                    if i > 5:
-                        break
-                    i += 1
-                images = images.cuda()
-                targets = targets.cuda()
-
-                # compute output
-                logits = model(images)
-                loss = criterion(logits, targets)
-
-                # measure accuracy and record loss
-                pred1, pred5 = utils.accuracy(logits, targets, topk=(1, 5))
-                n = images.size(0)
-                losses.update(loss.item(), n)
-                top1.update(pred1[0], n)
-                top5.update(pred5[0], n)
-
-                # measure elapsed time
-                batch_time.update(time.time() - end)
-                end = time.time()
+            # measure elapsed time
+            batch_time.update(time.time() - end)
+            end = time.time()
 
         logger.info(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
                     .format(top1=top1, top5=top5))
@@ -228,7 +180,6 @@ def validate(val_loader, model, criterion, args):
 def get_prune_rate(model, pr_cfg):
     all_params = 0
     prune_params = 0
-
     i = 0
     for name, module in model.named_modules():
         if hasattr(module, "set_prune_rate"):
@@ -247,7 +198,7 @@ def generate_pr_cfg(model):
     if args.layerwise == 'l1':
         weights = []
         for name, module in model.named_modules():
-            if hasattr(module, "set_prune_rate") and name != 'fc':
+            if hasattr(module, "set_prune_rate") and name != "fc":
                 conv_weight = module.weight.data.detach().cpu()
                 weights.append(conv_weight.view(-1))
 
@@ -259,14 +210,35 @@ def generate_pr_cfg(model):
         # Based on the pruning threshold, the prune cfg of each layer is obtained
         for weight in weights:
             pr_cfg.append(torch.sum(torch.lt(torch.abs(weight), threshold)).item()/weight.size(0))
-        pr_cfg.append(0)
 
+        pr_cfg.append(0)
+        #import pdb; pdb.set_trace()
+    
     elif args.layerwise == 'uniform':
         pr_cfg = [args.prune_rate] * 54
         pr_cfg[-1] = 0
-
+    #pr_cfg = [0.32408588435374147, 0.406982421875, 0.6580403645833334, 0.5928955078125, 0.50701904296875, 0.620849609375, 0.6635199652777778, 0.67535400390625, 0.54150390625, 0.5310872395833334, 0.6903076171875, 0.530120849609375, 0.6433241102430556, 0.675872802734375, 0.7753448486328125, 0.7902069091796875, 0.7621527777777778, 0.7320709228515625, 0.6675567626953125, 0.7088962131076388, 0.637054443359375, 0.6290740966796875, 0.6652289496527778, 0.688873291015625, 0.5538864135742188, 0.7781507703993056, 0.6635284423828125, 0.8420219421386719, 0.8455886840820312, 0.8425309922960069, 0.7321853637695312, 0.8086471557617188, 0.8236796061197916, 0.7345085144042969, 0.7720527648925781, 0.8275027804904513, 0.7670669555664062, 0.7563896179199219, 0.8310869004991319, 0.7610435485839844, 0.7079086303710938, 0.8244544135199653, 0.7275924682617188, 0.6203765869140625, 0.8668539259168837, 0.7195043563842773, 0.8949909210205078, 0.7720861434936523, 0.8736118740505643, 0.7472705841064453, 0.6554927825927734, 0.885939704047309, 0.7277250289916992, 0]
     return pr_cfg
 
+def get_mask(model):
+    masks = []
+    for n, m in model.named_modules():
+        if hasattr(m, "set_prune_rate"):
+            mask = m.binary_mask()
+            masks.append(mask.view(-1))
+    all_masks = torch.cat(masks,0)
+    return all_masks
+
+def pop_up(model, rate):
+    pop_num = []
+    for n, m in model.named_modules():
+        if hasattr(m, "set_prune_rate"):
+            pop_num.append(m.final_pop_up(rate))
+    model = model.to(device)
+    if len(args.gpus) != 1:
+        model = nn.DataParallel(model, device_ids=args.gpus)
+    #logger.info("epoch{} iter{} pop_configuration {}".format(epoch, iter, pop_num))
+    return np.array(pop_num)
 
 def get_model(args, logger):
     pr_cfg = []
@@ -285,7 +257,7 @@ def get_model(args, logger):
     if args.freeze_weights:
         freeze_model_weights(model)
 
-    model = model.to(device)
+    #model = model.to(device)
     return model, pr_cfg
 
 
@@ -304,15 +276,15 @@ def main():
 
     if len(args.gpus) != 1:
         model = nn.DataParallel(model, device_ids=args.gpus)
-    
+    #valid_obj, test_acc_top1, test_acc = validate(
+     #       val_loader, model, loss_func, args)
+
     for epoch in range(start_epoch, args.num_epochs):
         train_obj, train_acc_top1,  train_acc = train(
             epoch,  train_loader, model, loss_func, optimizer)
         valid_obj, test_acc_top1, test_acc = validate(
             val_loader, model, loss_func, args)
-        if args.use_dali:
-            train_loader.reset()
-            val_loader.reset()
+    
 
         is_best = best_acc < test_acc
         best_acc_top1 = max(best_acc_top1, test_acc_top1)
@@ -358,9 +330,9 @@ def resume(args, model, optimizer):
 def adjust_learning_rate(optimizer, epoch, step, len_epoch):
     # Warmup
     if args.lr_policy == 'step':
-        factor = epoch // 30
-        if epoch >= 90:
-            factor = factor + 1
+        factor = epoch // 8
+        #if epoch >= 5:
+        #    factor = factor + 1
         lr = args.lr * (0.1 ** factor)
     elif args.lr_policy == 'cos':
         lr = 0.5 * args.lr * (1 + math.cos(math.pi * epoch / args.num_epochs))
@@ -375,7 +347,6 @@ def adjust_learning_rate(optimizer, epoch, step, len_epoch):
 
     if epoch < args.warmup_length:
         lr = lr * float(1 + step + epoch * len_epoch) / (5. * len_epoch)
-
     if step == 0:
         print('current learning rate:{0}'.format(lr))
     for param_group in optimizer.param_groups:
@@ -398,7 +369,7 @@ def get_optimizer(args, model):
                 {"params": rest_params, "weight_decay": args.weight_decay},
             ],
             args.lr,
-            momentum=args.momentum,
+            momentum=0.9,
             weight_decay=args.weight_decay,
             nesterov=args.nesterov,
         )
