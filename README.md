@@ -5,7 +5,7 @@
 - Python >= 3.7.4
 - Pytorch >= 1.6.1
 - Torchvision >= 0.4.1
-- 
+  
 ## Reproduce the Experiment Results 
 
 1. Download the pre-trained models from this [link](https://drive.google.com/drive/folders/13et0J5S2iJK9oS-twrKXVqC-tk0AO9Gn?usp=sharing) and place them in the `pre-train` folder.
