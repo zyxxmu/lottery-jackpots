@@ -60,10 +60,10 @@ class PretrainConv(nn.Conv2d):
         sorted, _ = m.sort()
 
         flat_bm = self.b_mask.flatten()
-        idx0 = torch.squeeze(torch.nonzero(flat_bm==0))#被剪枝权重的idx
-        idx1 = torch.squeeze(torch.nonzero(flat_bm))#被保留权重的idx
-        pop_idx0 = torch.squeeze(torch.nonzero(m[idx0] > sorted[prune_num-1]))#第preserve_num个元素，大于或者等于这个元素的都要为1，小于的都要为0
-        pop_idx1 = torch.squeeze(torch.nonzero(m[idx1] <= sorted[prune_num-1]))#1中小于prese num的都要置0
+        idx0 = torch.squeeze(torch.nonzero(flat_bm==0))
+        idx1 = torch.squeeze(torch.nonzero(flat_bm))
+        pop_idx0 = torch.squeeze(torch.nonzero(m[idx0] > sorted[prune_num-1]))
+        pop_idx1 = torch.squeeze(torch.nonzero(m[idx1] <= sorted[prune_num-1]))
        
         if pop_idx0.numel() != 0 and pop_idx1.numel() != 0 and pop_idx0.numel() == pop_idx1.numel():
             pop_num = pop_idx0.numel()
